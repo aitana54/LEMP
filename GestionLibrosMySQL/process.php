@@ -30,9 +30,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $num_paginas = $libro->getNumeroPaginas();
 
             // Conexión a la base de datos
-            $servername = "db";
-            $username = "root";
-            $password = "rootpassword";
+            $servername = "localhost";
+            $username = "admin";
+            $password = "Informatica_1";
             $dbname = "biblioteca";
 
             $conn = new mysqli($servername, $username, $password, $dbname);
