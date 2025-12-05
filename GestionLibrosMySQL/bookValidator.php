@@ -95,5 +95,8 @@ class BookValidator
         if ($num_paginas === '') {
             $this->errores['num_paginas'] = 'El numero de páginas es obligatorio ponerlo';
         }
+        if (!is_numeric($num_paginas)) {
+            $this->errores['num_paginas'] = 'El número de páginas debe ser un número';
+        }
     }
 }

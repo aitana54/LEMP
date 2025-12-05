@@ -3,57 +3,62 @@ require_once 'classLibro.php';
 require_once 'bookValidator.php';
 
 use biblioteca\Libro;
-use biblioteca\bookValidator;
+use biblioteca\BookValidator;
 
-$validator = new bookValidator($_POST);
 $errores = [];
-$old = [];
 $libro = null;
+$mensaje = '';
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    $validator = new BookValidator($_POST);
+
     if ($validator->validar()) {
         $old = $validator->old();
+        $errores = $validator->errores();
+        if (empty($errores)) {
+            // Crear libro
+            $libro = new Libro();
+            $libro->setTitulo($old['titulo']);
+            $libro->setAutor($old['autor']);
+            $libro->setAnioPublicacion((int)$old['anio_publicacion']);
+            $libro->setNumeroPaginas((int)$old['num_paginas']);
 
-        $libro = new Libro();
-        $libro->setTitulo($old['titulo']);
-        $libro->setAutor($old['autor']);
-        $libro->setAnioPublicacion($old['anio_publicacion']);
-        $libro->setNumeroPaginas($old['num_paginas']);
+            // Asignar variables para bind_param
+            $titulo = $libro->getTitulo();
+            $autor = $libro->getAutor();
+            $anio_publicacion = $libro->getAnioPublicacion();
+            $num_paginas = $libro->getNumeroPaginas();
+
+            // Conexión a la base de datos
+            $servername = "db";
+            $username = "root";
+            $password = "rootpassword";
+            $dbname = "biblioteca";
+
+            $conn = new mysqli($servername, $username, $password, $dbname);
+
+            if ($conn->connect_error) {
+                die("Connection failed: " . $conn->connect_error);
+            }
+
+            $stmt = $conn->prepare("INSERT INTO libros (titulo, autor,anio_publicacion, num_paginas) VALUES (?, ?, ?, ?) ") ;
+            $stmt->bind_param("ssii", $titulo, $autor, $anio_publicacion, $num_paginas);
+
+            if ($stmt->execute()) {
+                $mensaje = "Libro guardado correctamente";
+            } else {
+                $errores[] = "Error al guardar el libro: " . $stmt->error;
+            }
+
+            $stmt->close();
+            $conn->close();
+        }
     } else {
         $errores = $validator->errores();
-        $old = $validator->old();
     }
 }
-
-$servername = "db";
-$username = "root";
-$password = "rootpassword";
-$dbname = "biblioteca";
-var_dump($servername, $username, $password, $dbname);
-
-// Create connection
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
-
-// prepare and bind
-$stmt = $conn->prepare("INSERT INTO libros (titulo, autor, anio_publicacion, num_paginas) VALUES (?, ?, ?, ?)");
-$stmt->bind_param("ssii", $titulo, $autor, $anio_publicacion, $num_paginas);
-
-if ($stmt->execute()) {
-    echo "Libro guardado correctamente";
-} else {
-    echo "Error al guardar el libro: " . $stmt->error;
-}
-
-
-$stmt->close();
-$conn->close();
-
 ?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -74,6 +79,10 @@ $conn->close();
             <a href="form.html">Volver al formulario</a>
         </div>
     <?php elseif ($libro) : ?>
+        <div style="color: green;">
+            <p><?= htmlspecialchars($mensaje) ?></p>
+        </div>
+
         <div style="border: 1px solid #ccc; padding: 10px; margin-top: 20px;">
             <h3>Resumen del libro</h3>
             <p><strong>Título:</strong> <?= htmlspecialchars($libro->getTitulo()) ?></p>
